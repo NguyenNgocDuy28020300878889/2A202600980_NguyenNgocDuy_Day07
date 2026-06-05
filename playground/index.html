@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antigravity Lab 7 — RAG & Embedding Store Playground</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glow-container">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-icon">▲</span>
+                <div class="logo-text">
+                    <h1>Antigravity</h1>
+                    <span class="sub-logo">RAG & EMBEDDING PLAYGROUND</span>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label">Embedding Provider:</span>
+                    <span id="status-provider" class="status-badge provider-badge">Mock (MD5)</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Chunks in Store:</span>
+                    <span id="status-count" class="status-badge count-badge">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">API Server:</span>
+                    <span class="status-indicator online">Online</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="app-workspace">
+            <!-- SIDEBAR: SETTINGS & INGESTION -->
+            <aside class="app-sidebar">
+                <div class="sidebar-card">
+                    <h2 class="sidebar-title">⚙️ Playground Settings</h2>
+                    
+                    <!-- Embedding Configuration -->
+                    <div class="form-group">
+                        <label for="provider-select">Embedding Provider</label>
+                        <select id="provider-select" class="form-control">
+                            <option value="mock" selected>Mock Embeddings (MD5 Hash)</option>
+                            <option value="local">Local Model (all-MiniLM-L6-v2)</option>
+                            <option value="openai">OpenAI (text-embedding-3-small)</option>
+                        </select>
+                        <p class="help-text">Local & OpenAI require optional packages in your env.</p>
+                    </div>
+
+                    <div id="openai-key-group" class="form-group hidden">
+                        <label for="openai-key-input">OpenAI API Key</label>
+                        <input type="password" id="openai-key-input" class="form-control" placeholder="sk-proj-...">
+                    </div>
+
+                    <hr class="divider">
+
+                    <!-- Chunking Configuration -->
+                    <h3 class="settings-subtitle">Chunking Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label for="strategy-select">Chunking Strategy</label>
+                        <select id="strategy-select" class="form-control">
+                            <option value="recursive" selected>Recursive Chunker (Đệ quy)</option>
+                            <option value="fixed_size">Fixed Size Chunker (Kích thước cố định)</option>
+                            <option value="by_sentences">Sentence Chunker (Theo câu)</option>
+                        </select>
+                    </div>
+
+                    <div id="size-settings" class="form-row">
+                        <div class="form-group col">
+                            <label for="chunk-size-input">Chunk Size</label>
+                            <input type="number" id="chunk-size-input" class="form-control" value="500" min="50" max="2000">
+                        </div>
+                        <div id="overlap-group" class="form-group col">
+                            <label for="overlap-input">Overlap</label>
+                            <input type="number" id="overlap-input" class="form-control" value="50" min="0" max="500">
+                        </div>
+                    </div>
+
+                    <div id="sentence-settings" class="form-group hidden">
+                        <label for="max-sentences-input">Max Sentences Per Chunk</label>
+                        <input type="number" id="max-sentences-input" class="form-control" value="3" min="1" max="20">
+                    </div>
+
+                    <!-- Ingest Action -->
+                    <button id="btn-ingest" class="btn btn-primary btn-block">
+                        📥 Ingest & Chunk 5 Papers
+                    </button>
+                    <div id="ingest-loader" class="loader hidden">Ingesting documents...</div>
+                </div>
+
+                <div class="sidebar-card doc-list-card">
+                    <h2 class="sidebar-title">📄 Indexed Documents</h2>
+                    <div id="indexed-docs-list" class="doc-list">
+                        <div class="empty-state">No documents indexed yet.</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- MAIN PLAYGROUND AREA -->
+            <main class="app-main">
+                <!-- TABS NAVIGATION -->
+                <nav class="tab-nav">
+                    <button class="tab-btn active" data-tab="tab-comparator">✂️ Chunker Comparator</button>
+                    <button class="tab-btn" data-tab="tab-store">🗄️ Vector Store Explorer</button>
+                    <button class="tab-btn" data-tab="tab-agent">🤖 RAG Chat Agent</button>
+                    <button class="tab-btn" data-tab="tab-benchmark">📊 Benchmark Console</button>
+                </nav>
+
+                <!-- TAB CONTENTS -->
+                <div class="tab-content-container">
+                    
+                    <!-- TAB 1: CHUNKER COMPARATOR -->
+                    <section id="tab-comparator" class="tab-pane active">
+                        <div class="pane-header">
+                            <h2>Chunking Sandbox</h2>
+                            <p>Test and compare how your text splits using different parameters in real-time.</p>
+                        </div>
+                        <div class="sandbox-split">
+                            <div class="sandbox-input-side">
+                                <div class="form-group">
+                                    <label for="sandbox-textarea">Input Text</label>
+                                    <textarea id="sandbox-textarea" class="form-control sandbox-input" placeholder="Paste some paragraphs here to test chunking..."></textarea>
+                                </div>
+                                <div class="sandbox-controls">
+                                    <button id="btn-sandbox-chunk" class="btn btn-secondary">Run Chunker</button>
+                                    <button id="btn-load-sample-text" class="btn btn-ghost">Load Sample Paragraph</button>
+                                </div>
+                            </div>
+                            <div class="sandbox-output-side">
+                                <div class="stats-ribbon">
+                                    <div class="stat-box">
+                                        <span class="stat-value" id="sandbox-chunk-count">-</span>
+                                        <span class="stat-label">Chunks</span>
+                                    </div>
+                                    <div class="stat-box">
+                                        <span class="stat-value" id="sandbox-avg-len">-</span>
+                                        <span class="stat-label">Avg Length</span>
+                                    </div>
+                                </div>
+                                <label>Visualized Chunks</label>
+                                <div id="sandbox-visual-output" class="visual-output">
+                                    <div class="empty-state">Enter text and click Run Chunker to view results.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 2: VECTOR STORE EXPLORER -->
+                    <section id="tab-store" class="tab-pane">
+                        <div class="pane-header">
+                            <h2>Vector Store Search & Filter Explorer</h2>
+                            <p>Query the database directly, test similarity scores, and try metadata pre-filtering.</p>
+                        </div>
+                        
+                        <div class="store-grid">
+                            <div class="store-search-panel">
+                                <h3 class="panel-title">Semantic Search</h3>
+                                <div class="form-group">
+                                    <label for="search-query">Search Query</label>
+                                    <input type="text" id="search-query" class="form-control" placeholder="e.g. What is COSMOS used for?">
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="search-topk">Top K</label>
+                                        <input type="number" id="search-topk" class="form-control" value="3" min="1" max="10">
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="search-filter">Metadata Filter (JSON)</label>
+                                        <input type="text" id="search-filter" class="form-control" placeholder='e.g. {"year": 2023}'>
+                                    </div>
+                                </div>
+                                <button id="btn-store-search" class="btn btn-primary btn-block">🔍 Search Vector Store</button>
+                                
+                                <div class="quick-filters">
+                                    <span class="filter-tag" data-filter='{"year": 2023}'>Year: 2023</span>
+                                    <span class="filter-tag" data-filter='{"year": 2024}'>Year: 2024</span>
+                                    <span class="filter-tag" data-filter='{"domain": "Spatial Multi-omics"}'>Spatial Multi-omics</span>
+                                    <span class="filter-tag" data-filter='{"publisher": "Nature Methods"}'>Nature Methods</span>
+                                </div>
+                            </div>
+
+                            <div class="store-results-panel">
+                                <h3 class="panel-title">Retrieval Results</h3>
+                                <div id="store-search-results" class="search-results-list">
+                                    <div class="empty-state">Run a search query to view matching vector chunks.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 3: RAG CHAT AGENT -->
+                    <section id="tab-agent" class="tab-pane">
+                        <div class="pane-header">
+                            <h2>KnowledgeBaseAgent Playground</h2>
+                            <p>Simulate how RAG combines vector retrieval and LLM context injection to answer questions.</p>
+                        </div>
+
+                        <div class="agent-split">
+                            <div class="agent-chat-side">
+                                <div class="chat-history" id="chat-history">
+                                    <div class="chat-bubble agent-bubble">
+                                        <p>Hello! I am your RAG Knowledge Base Agent. Index your documents, type a question, and I'll use the retrieved context to answer.</p>
+                                    </div>
+                                </div>
+                                <div class="chat-input-bar">
+                                    <input type="text" id="agent-chat-input" class="form-control chat-input" placeholder="Ask a question about the loaded papers...">
+                                    <button id="btn-agent-send" class="btn btn-primary">Send</button>
+                                </div>
+                            </div>
+
+                            <div class="agent-context-side">
+                                <h3>🧠 RAG Pipeline Debugger</h3>
+                                <div class="debugger-card">
+                                    <div class="debug-section">
+                                        <h4>Prompt Template Injected Context</h4>
+                                        <pre id="debug-prompt-output" class="code-block">Prompt template will render here once a query is processed...</pre>
+                                    </div>
+                                    <div class="debug-section">
+                                        <h4>Retrieved Evidences</h4>
+                                        <div id="debug-chunks-list" class="debug-chunks">
+                                            <div class="empty-state-small">No chunks retrieved yet.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 4: BENCHMARK CONSOLE -->
+                    <section id="tab-benchmark" class="tab-pane">
+                        <div class="pane-header">
+                            <h2>Group Benchmark Scoreboard (Phase 2)</h2>
+                            <p>Verify and run the 5 standard benchmark queries agreed upon by your group.</p>
+                        </div>
+
+                        <div class="benchmark-container">
+                            <div class="benchmark-actions">
+                                <button id="btn-run-all-benchmarks" class="btn btn-secondary">🚀 Run All 5 Benchmark Queries</button>
+                                <span class="help-text">Queries will search across your currently loaded/chunked papers.</span>
+                            </div>
+
+                            <table class="benchmark-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 5%">#</th>
+                                        <th style="width: 25%">Query</th>
+                                        <th style="width: 25%">Gold Answer</th>
+                                        <th style="width: 30%">Top Retrieved Chunk (Live)</th>
+                                        <th style="width: 10%">Cosine Score</th>
+                                        <th style="width: 5%">Relevant</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="benchmark-rows">
+                                    <!-- Rows added dynamically -->
+                                    <tr data-qid="1">
+                                        <td>1</td>
+                                        <td class="b-query">"What technology or package is used to pre-process the STARmap and Stereo-Seq data in COSMOS?"</td>
+                                        <td class="b-gold">The 'scanpy' Python package is used to normalize the UMI counts to the median of total counts per cell, then log-transformed.</td>
+                                        <td class="b-live-chunk empty-cell">Run benchmark to retrieve...</td>
+                                        <td class="b-score">-</td>
+                                        <td><span class="badge badge-pending">N/A</span></td>
+                                    </tr>
+                                    <tr data-qid="2">
+                                        <td>2</td>
+                                        <td class="b-query">"What is COSMOS used for in Communications Biology 2023?"</td>
+                                        <td class="b-gold">COSMOS is used as a platform for real-time morphology-based, label-free cell sorting using deep learning.</td>
+                                        <td class="b-live-chunk empty-cell">Run benchmark to retrieve...</td>
+                                        <td class="b-score">-</td>
+                                        <td><span class="badge badge-pending">N/A</span></td>
+                                    </tr>
+                                    <tr data-qid="3">
+                                        <td>3</td>
+                                        <td class="b-query">"What is the primary improvement of SMOPCA compared to standard methods?"</td>
+                                        <td class="b-gold">SMOPCA integrates spatially aware dimension reduction of multi-omics data to improve the efficiency and accuracy of spatial domain detection.</td>
+                                        <td class="b-live-chunk empty-cell">Run benchmark to retrieve...</td>
+                                        <td class="b-score">-</td>
+                                        <td><span class="badge badge-pending">N/A</span></td>
+                                    </tr>
+                                    <tr data-qid="4">
+                                        <td>4</td>
+                                        <td class="b-query">"Which scientific journal published the paper on Spatial epigenome–transcriptome co-profiling of mammalian tissues?"</td>
+                                        <td class="b-gold">Nature published the paper in 2023.</td>
+                                        <td class="b-live-chunk empty-cell">Run benchmark to retrieve...</td>
+                                        <td class="b-score">-</td>
+                                        <td><span class="badge badge-pending">N/A</span></td>
+                                    </tr>
+                                    <tr data-qid="5">
+                                        <td>5</td>
+                                        <td class="b-query">"What is SpatialGlue used for according to the 2024 Nature Methods publication?"</td>
+                                        <td class="b-gold">Deciphering spatial domains from spatial multi-omics with SpatialGlue.</td>
+                                        <td class="b-live-chunk empty-cell">Run benchmark to retrieve...</td>
+                                        <td class="b-score">-</td>
+                                        <td><span class="badge badge-pending">N/A</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

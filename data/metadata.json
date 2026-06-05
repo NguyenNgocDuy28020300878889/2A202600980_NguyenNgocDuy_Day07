@@ -1,0 +1,37 @@
+[
+  {
+    "title": "Cooperative integration of spatially resolved multi-omics data with COSMOS",
+    "year": 2024,
+    "publisher": "Nature Communications",
+    "doi": "https://doi.org/10.1038/s41467-024-55204-y",
+    "domain": "Spatial Multi-omics"
+  },
+  {
+    "title": "COSMOS: a platform for real-time morphology-based, label-free cell sorting using deep learning",
+    "year": 2023,
+    "publisher": "Communications Biology",
+    "doi": "https://doi.org/10.1038/s42003-023-05325-9",
+    "domain": "AI for Cell Analysis"
+  },
+  {
+    "title": "SMOPCA: spatially aware dimension reduction integrating multi-omics improves the efficiency of spatial domain detection",
+    "year": 2025,
+    "publisher": "Genome Biology",
+    "doi": "https://doi.org/10.1186/s13059-025-03576-9",
+    "domain": "Spatial Multi-omics"
+  },
+  {
+    "title": "Spatial epigenome–transcriptome co-profiling of mammalian tissues",
+    "year": 2023,
+    "publisher": "Nature",
+    "doi": "https://doi.org/10.1038/s41586-023-05795-1",
+    "domain": "Spatial Multi-omics"
+  },
+  {
+    "title": "Deciphering spatial domains from spatial multi-omics with SpatialGlue",
+    "year": 2024,
+    "publisher": "Nature Methods",
+    "doi": "https://doi.org/10.1038/s41592-024-02316-4",
+    "domain": "Spatial Multi-omics"
+  }
+]

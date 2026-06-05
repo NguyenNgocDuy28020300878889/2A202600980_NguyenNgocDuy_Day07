@@ -19,19 +19,29 @@ from src.models import Document
 from src.store import EmbeddingStore
 
 SAMPLE_FILES = [
-    "data/python_intro.txt",
-    "data/vector_store_notes.md",
-    "data/rag_system_design.md",
-    "data/customer_support_playbook.txt",
-    "data/chunking_experiment_report.md",
-    "data/vi_retrieval_notes.md",
+    "data/paper1.md",
+    "data/paper2.md",
+    "data/paper3.md",
+    "data/paper4.md",
+    "data/paper5.md",
 ]
 
 
 def load_documents_from_files(file_paths: list[str]) -> list[Document]:
     """Load documents from file paths for the manual demo."""
+    import json
+    import re
+
     allowed_extensions = {".md", ".txt"}
     documents: list[Document] = []
+
+    metadata_list = []
+    metadata_file = Path("data/metadata.json")
+    if metadata_file.exists():
+        try:
+            metadata_list = json.loads(metadata_file.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"Warning: Could not parse metadata.json: {e}")
 
     for raw_path in file_paths:
         path = Path(raw_path)
@@ -45,11 +55,19 @@ def load_documents_from_files(file_paths: list[str]) -> list[Document]:
             continue
 
         content = path.read_text(encoding="utf-8")
+        doc_metadata = {"source": str(path), "extension": path.suffix.lower()}
+
+        match = re.match(r"paper(\d+)", path.stem)
+        if match and metadata_list:
+            idx = int(match.group(1)) - 1
+            if 0 <= idx < len(metadata_list):
+                doc_metadata.update(metadata_list[idx])
+
         documents.append(
             Document(
                 id=path.stem,
                 content=content,
-                metadata={"source": str(path), "extension": path.suffix.lower()},
+                metadata=doc_metadata,
             )
         )
 
